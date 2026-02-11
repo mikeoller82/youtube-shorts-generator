@@ -1372,21 +1372,104 @@ def get_audio_duration(audio_file: str) -> float:
    
 
 # Streamlit app
+def render_app_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            background: radial-gradient(circle at top right, #1f2b5f, #0a0f1f 48%, #05070f 100%);
+            color: #eef2ff;
+        }
+        .hero-card {
+            background: linear-gradient(120deg, rgba(78, 120, 255, 0.18), rgba(157, 89, 255, 0.16));
+            border: 1px solid rgba(174, 195, 255, 0.25);
+            border-radius: 20px;
+            padding: 1.6rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+        }
+        .hero-subtitle {
+            margin-top: 0.3rem;
+            font-size: 1rem;
+            color: #d8e0ff;
+            line-height: 1.4;
+        }
+        .pipeline-chip {
+            display: inline-block;
+            margin: 0.25rem 0.5rem 0.25rem 0;
+            padding: 0.45rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(154, 176, 255, 0.18);
+            border: 1px solid rgba(200, 213, 255, 0.24);
+            color: #f7f9ff;
+            font-size: 0.84rem;
+        }
+        .stTextInput input, .stNumberInput input, .stTextArea textarea {
+            border-radius: 12px !important;
+            border: 1px solid rgba(172, 191, 255, 0.4) !important;
+            background: rgba(4, 9, 23, 0.7) !important;
+            color: #edf2ff !important;
+        }
+        .stButton button {
+            background: linear-gradient(100deg, #5a6dff, #9354ff) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 12px !important;
+            font-weight: 600 !important;
+            padding: 0.65rem 1.3rem !important;
+            box-shadow: 0 8px 22px rgba(103, 103, 255, 0.45) !important;
+        }
+        [data-testid="stExpander"] {
+            background: rgba(4, 9, 23, 0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(190, 201, 255, 0.22);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def main():
-    st.set_page_config(page_title="YouTube Shorts Generator", page_icon="🎥", layout="wide")
-    st.title("YouTube Shorts Generator")
+    st.set_page_config(page_title="VideoGraphAI Studio", page_icon="🎬", layout="wide")
+    render_app_styles()
 
-    # Input fields
-    topic = st.text_input("Enter the topic for your YouTube video:")
-    time_frame = st.text_input("Enter the time frame for recent events (e.g., 'past week', '30d', '1y'):")
-    video_length = st.number_input("Enter the desired video length in seconds:")
+    st.markdown(
+        """
+        <div class="hero-card">
+            <h1 style="margin:0;">VideoGraphAI Studio</h1>
+            <p class="hero-subtitle">Create social-ready short videos with an AI production flow inspired by premium creator tools.</p>
+            <div>
+                <span class="pipeline-chip">1. Research</span>
+                <span class="pipeline-chip">2. Title + SEO</span>
+                <span class="pipeline-chip">3. Script + Storyboard</span>
+                <span class="pipeline-chip">4. Voice + Subtitles</span>
+                <span class="pipeline-chip">5. Render + Export</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Add an optional text area for user-provided script
-    user_script = st.text_area("Provide your own script (optional):")
+    with st.form("generation_form"):
+        col1, col2 = st.columns([1.35, 1])
+        with col1:
+            topic = st.text_input("Video concept", placeholder="e.g., AI startup ideas for 2026")
+            time_frame = st.text_input("Research timeframe", placeholder="e.g., past week, 30d, 1y")
+            user_script = st.text_area(
+                "Optional custom script",
+                placeholder="Paste your script here to skip automated research and use your own narrative.",
+                height=170,
+            )
+        with col2:
+            video_length = st.slider("Target duration (seconds)", min_value=30, max_value=180, value=60, step=15)
+            st.caption("Tip: 45–90 seconds usually performs best for Shorts/Reels/TikTok.")
 
-    if st.button("Generate YouTube Shorts"):
+        submit = st.form_submit_button("Generate AI Video")
+
+    if submit:
         if (topic and time_frame) or (user_script and user_script.strip()):
-            with st.spinner("Generating YouTube Shorts ... This will take at least 3-5 minutes"):
+            with st.spinner("Producing your video... this can take 3–5 minutes"):
                 try:
                     results = asyncio.run(youtube_shorts_workflow(topic, time_frame, video_length, user_script))
                     if "Error" in results:
@@ -1397,12 +1480,25 @@ def main():
                     st.error(f"An unexpected error occurred: {str(e)}")
                     logger.exception("Unexpected error in YouTube Shorts generation")
         else:
-            st.warning("Please enter both topic and time frame, or provide your own script.")
+            st.warning("Enter both concept + timeframe, or provide a custom script.")
 
 def display_results(results):
     st.subheader("Generation Results")
+    mapped_agent_names = {
+        "Recent Events Research Agent": "Trend Research",
+        "Title Generation Agent": "Hook Title Ideas",
+        "Title Selection Agent": "Best Title Selection",
+        "Description Generation Agent": "Description & CTA",
+        "Hashtag and Tag Generation Agent": "Hashtags & Tags",
+        "Video Script Generation Agent": "Script Draft",
+        "Image Generation Agent": "Visual Generation",
+        "Storyboard Generation Agent": "Scene Storyboard",
+        "User Script Provided": "Custom Script Input",
+    }
+
     for agent_name, result in results.items():
-        with st.expander(f"{agent_name} Result"):
+        label = mapped_agent_names.get(agent_name, agent_name)
+        with st.expander(f"{label}"):
             if agent_name == "Storyboard Generation Agent" and isinstance(result, list):
                 for scene in result:
                     st.write(f"Scene {scene['number']}:")
